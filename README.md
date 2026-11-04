@@ -29,14 +29,14 @@ what order to deal with it.
 - **The safety net.** Characterization tests written from what the code does
   now, verified by the compiler before anyone sees them.
 
-A full report on Orchard, a real 300,000-line codebase, is here:
+A full report on Orchard, a real 414,611-line codebase, is here:
 [sample/orchard](sample/orchard/) ([PDF](sample/orchard/orchard-assessment.pdf)).
 
 ## How it runs
 
 On your machine. The whole analysis runs from the source tree, so it works on a
 solution that no longer builds, which is the state an inherited codebase is in
-on the first day. A report on Orchard takes about twelve seconds. Nothing is
+on the first day. A report on Orchard takes about fifteen seconds. Nothing is
 uploaded, nothing is hosted, no account is needed.
 
 ## Who
