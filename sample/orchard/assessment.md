@@ -1,6 +1,6 @@
 # orchard
 
-A structural assessment, generated on 2026-10-20 by Legacy Lens.
+A structural assessment, generated on 2026-11-04 by Legacy Lens.
 
 Every number in this document was measured from the project files, the source
 text and the change history. Nothing was estimated, and no part of it was
@@ -11,11 +11,12 @@ rather than left out.
 
 | Area | Verdict | Measured | Detail in |
 |---|---|---|---|
-| Project format | **to convert** | 89 of 89 in the old format, 16 convertible as they stand | What a move to modern .NET runs into |
+| Project format | **to convert** | 89 of 89 in the old format, 13 the SDK conversion takes today | What a move to modern .NET runs into |
 | Packages with no future | **blocking** | 7 packages that exist only inside the .NET Framework; 73 of 89 projects reference one | What a move to modern .NET runs into |
 | Packages nobody has classified | **unknown** | 78 of 93 distinct packages, counted as unknown rather than as fine | What a move to modern .NET runs into |
 | Tests | **patchy** | no test project references 45 of the 78 projects that ship code, 75,908 lines | What will hurt |
 | Package versions | **paid for once** | every package on one version today, 279 binding redirects written by hand | What a move to modern .NET runs into |
+| Framework parts with no successor | **to replace** | 1,018 uses of 87 types in 46 projects | What the code uses that modern .NET does not have |
 | Libraries tied to the web stack | **to separate** | 1 class library depends on the web stack | What will hurt |
 | Change history | **read** | 449 files ranked on structure and churn over the full history | What will hurt |
 
@@ -31,24 +32,24 @@ covering 75,908 lines. 449 files were ranked on structure and change frequency
 together. The one at the top is
 src/Orchard.Web/Modules/Orchard.OutputCache/Filters/OutputCacheFilter.cs. 89 of
 89 project files are in the pre-SDK format. 73 projects reference packages that
-exist only inside the .NET Framework, which no conversion tool will fix; 16
-others are convertible as they stand. The work is ordered from what blocks
-everything else through to what may cost nothing, and starts with: classify the
-packages nobody has checked yet.
+exist only inside the .NET Framework, which no conversion tool will fix. 13
+project files take the SDK format today, whatever their packages. The work is
+ordered from what blocks everything else through to what may cost nothing, and
+starts with: classify the packages nobody has checked yet.
 
 ## What is already on your side
 
-- 16 of 89 projects can take the modern project format as they stand: no package
-  in them blocks it.
+- 13 of 89 projects can take the modern project format today: the SDK conversion
+  writes each a patch, and nothing in their files would be lost.
 - 33 of the 78 projects that ship code are referenced by a test project, so a
   change there has something to fail against.
 - Every one of the 93 distinct packages is pinned to a single version: nothing
   disagrees with itself today.
 - 8 of the 93 distinct packages are known to run on modern .NET or to have a
   documented successor.
-- 83% of the calls into Microsoft.AspNet.Mvc have a recorded counterpart in
+- 87% of the calls into Microsoft.AspNet.Mvc have a recorded counterpart in
   Microsoft.AspNetCore.Mvc.
-- 58% of the calls into System.ServiceModel have a recorded counterpart in
+- 88% of the calls into System.ServiceModel have a recorded counterpart in
   CoreWCF.Primitives.
 
 ## What this is
@@ -145,14 +146,14 @@ The largest projects, which is where the time goes:
 
 ## Where the code is entered
 
-627 entry points: every action, operation, handler, command and job a request, a
+629 entry points: every action, operation, handler, command and job a request, a
 client or a schedule can reach. A flow through the code starts at one of these,
 so this is the list of everything that can be traced. Test projects are left
 out.
 
 | Kind | Entry points | Projects |
 |---|---:|---:|
-| MVC action | 528 | 47 |
+| MVC action | 530 | 47 |
 | Command-line command | 69 | 22 |
 | Background or scheduled task | 14 | 13 |
 | Remote procedure handler (XML-RPC) | 6 | 6 |
@@ -163,10 +164,32 @@ out.
 | OWIN startup | 1 | 1 |
 | Program entry (Main) | 1 | 1 |
 
-Most entered: Orchard.Core (46), Orchard.Projections (35), Orchard.Users (35),
+Most entered: Orchard.Core (48), Orchard.Projections (35), Orchard.Users (35),
 Orchard.Blogs (32), Upgrade (32), and 53 other projects. A framework that
 dispatches through interfaces of its own, beyond the ones this tool knows, has
 entry points this count does not include.
+
+### Reachable as actions without looking like actions
+
+8 actions on 8 controllers, from 8 declarations. MVC routes to every public
+instance method of a controller that is not generic and not `[NonAction]`,
+whatever it returns. These carry no verb, route or action name, return no
+result, and on an API do not start with a verb either, so nothing says an action
+was meant; each is reachable by URL with no authorisation beyond what its
+controller already asks for. `[NonAction]`, `protected`, or moving the method
+out of the controller closes it; a helper on a base controller is closed once,
+on the base.
+
+| Declared on | Method | Returns | At | Reachable on |
+|---|---|---|---|---|
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.MediaProcessing/Controllers/AdminController.cs:248` | `AdminController` |
+| `AccountController` | `Challenge` | void | `src/Orchard.Web/Modules/Orchard.OpenId/Controllers/AccountController.cs:96` | `AccountController` |
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.Projections/Controllers/AdminController.cs:292` | `AdminController` |
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.Rules/Controllers/AdminController.cs:357` | `AdminController` |
+| `AdminController` | `GetEnabledFeatures` | not a result | `src/Orchard.Web/Modules/Orchard.Themes/Controllers/AdminController.cs:315` | `AdminController` |
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.Users/Controllers/AdminController.cs:557` | `AdminController` |
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.Warmup/Controllers/AdminController.cs:119` | `AdminController` |
+| `AdminController` | `AddModelError` | void | `src/Orchard.Web/Modules/Orchard.Workflows/Controllers/AdminController.cs:584` | `AdminController` |
 
 ## What will hurt
 
@@ -202,7 +225,7 @@ Generated code and everything inside a test project are left out rather than
 ranked, because reporting that a test fixture is complicated and untested is
 true and useless.
 
-**The history window was widened.** Only 102 of this directory's 11677 commits
+**The history window was widened.** Only 101 of this directory's 11677 commits
 fall in the last 24 months, so the whole history was read instead. A window that
 recent describes a codebase that has stopped changing by its tail.
 
@@ -230,12 +253,18 @@ recent describes a codebase that has stopped changing by its tail.
 |---|---:|
 | Projects | 89 |
 | In the old project format | 89 |
-| Convertible as they stand | 16 |
+| Convertible to the SDK format today | 13 |
 | Blocked by a package with no path forward | 73 |
 | Package references in total | 722 |
 | Distinct packages | 93 |
 | Pinned to more than one version | 0 |
 | Hand-written binding redirects | 279 |
+
+Convertible means what `convert sdk` does: the conversion writes the project
+file a patch, because it carries nothing the SDK format would lose. That is a
+question about the file. Whether its packages have a future is the row below,
+and the two are independent: 2 convertible projects are also blocked, and 5
+projects that no package blocks are refused for what their files carry.
 
 **This legacy has drifted.** Every package is pinned to a single version today,
 but 279 binding redirects were written by hand. A redirect only ever gets
@@ -263,6 +292,375 @@ code that calls them is rewritten, replaced, or left where it is.
 a package portable without checking is how a quote acquires the one item that
 doubles it.
 
+## What was built and run
+
+### measurement-orchard
+
+Measured on 2026-10-31 15:51, on Microsoft Windows NT 10.0.26100.0, PowerShell
+7.6.7, at commit `e97a145c`, the commit of this checkout, by `measure.ps1`.
+Quoted from what it wrote; nothing here was run by this assessment.
+
+| Step | Exit code | Assemblies written | Distinct errors | Projects with an error |
+|---|---:|---:|---:|---:|
+| `before-restore` | 0 |  |  |  |
+| `before-build` | 0 | 88 | 0 | 0 |
+| `after-restore` | 0 |  |  |  |
+| `after-build` | 0 | 88 | 0 | 0 |
+
+Conversions, in the order applied: `packages: applied`; `sdk: applied`.
+
+- Does it restore and build as it stands: **It builds as it stands.**
+- Does it restore and build after: **It builds.** The word *converted* has been
+  earned.
+
+### run-orchard
+
+Measured on 2026-10-31 16:28, on Microsoft Windows NT 10.0.26100.0, PowerShell
+7.6.7, at commit `e97a145c`, the commit of this checkout, by `measure.ps1`.
+Quoted from what it wrote; nothing here was run by this assessment.
+
+| Step | Exit code | Assemblies written | Distinct errors | Projects with an error |
+|---|---:|---:|---:|---:|
+| `before-restore` | 0 |  |  |  |
+| `before-build` | 0 | 88 | 0 | 0 |
+| `after-restore` | 0 |  |  |  |
+| `after-build` | 0 | 88 | 0 | 0 |
+
+Conversions, in the order applied: `packages: applied`; `sdk: applied`.
+
+- Does it restore and build as it stands: **It builds as it stands.**
+- Does it run as it stands: **It runs.** Installed, the home page carries its
+  name, the admin answers, 45 s from launch to the end.
+- Does it restore and build after: **It builds.** The word *converted* has been
+  earned.
+- Does it run after: **It runs.** Installed, the home page carries its name, the
+  admin answers, 32 s from launch to the end.
+
+The site as it stands:
+
+| Request | HTTP | Seconds | What came back |
+|---|---:|---:|---|
+| GET / (the setup page) | 200 | 20.3 | the setup form |
+| POST / (setup: Default recipe, built-in database) | 200 | 18.3 | installed, and redirected to `http://localhost:8090/` |
+| GET / (the home page) | 200 | 0.0 | carries the site name *Orchard as it stands* |
+| POST /Users/Account/LogOn, then GET /Admin | 200 | 0.6 | the dashboard, at `http://localhost:8090/Admin` |
+| GET /Admin, signed in | 200 | 0.0 | answers |
+
+The site converted:
+
+| Request | HTTP | Seconds | What came back |
+|---|---:|---:|---|
+| GET / (the setup page) | 200 | 11.3 | the setup form |
+| POST / (setup: Default recipe, built-in database) | 200 | 16.6 | installed, and redirected to `http://localhost:8090/` |
+| GET / (the home page) | 200 | 0.1 | carries the site name *Orchard converted by Legacy Lens* |
+| POST /Users/Account/LogOn, then GET /Admin | 200 | 0.5 | the dashboard, at `http://localhost:8090/Admin` |
+| GET /Admin, signed in | 200 | 0.1 | answers |
+
+Coverage: `coverage.cobertura.xml`, 2,425 files and 124,776 lines instrumented,
+62,364 of them run while the tests ran. Each link of a traced flow says whether
+it ran.
+
+What this does not say: a build with no error compiled; it does not mean the
+application does what it did. A run is the requests listed, on the built-in
+database, and nothing else.
+
+## Where the code leaves .NET
+
+In the source and the tree: 12 native libraries in the tree that no declaration
+names. A native library is built for one processor and one operating system, and
+it moves only where it can still be loaded. Test projects are left out, and so
+is a library loaded from a path computed at run time (`LoadLibrary`,
+`NativeLibrary.Load`), which the source does not name.
+
+What each means for a move:
+
+- **Loaded by something else.** 12 native libraries in the tree that no
+  declaration names: `lib/sqlce/amd64/Microsoft.VC90.CRT/` (1, 64-bit),
+  `lib/sqlce/amd64/` (5, 64-bit), `lib/sqlce/x86/Microsoft.VC90.CRT/` (1, 32-bit),
+  `lib/sqlce/x86/` (5, 32-bit). A component loads them, not this source, and they
+  move with that component.
+
+The 12 native libraries in the tree can be read for what each exports, its
+bitness and what it needs in turn, with [REA](https://github.com/morluto/rea)
+installed: `LEGACYLENS_REA` names it.
+
+## What the code uses that modern .NET does not have
+
+1,018 uses of 87 types across 265 files in 46 projects name a part of the .NET
+Framework that modern .NET does not have. No package carries these, so the
+packages above do not count them: they are the framework's own assemblies, and a
+move takes them out from under the code whatever happens to the packages.
+
+Read from the source, not compiled: a name counts where it is written in full,
+or where its file imports a retired namespace that declares it and nothing in
+the solution declares one. Which names each namespace declares was read from the
+.NET Framework 4.8 reference assemblies. A use is one type named on one line.
+Test projects are left out; 3,362 files read.
+
+| Family | Uses | Types | Files | Projects |
+|---|---:|---:|---:|---:|
+| System.Web | 903 | 62 | 236 | 42 |
+| ASP.NET hosting | 61 | 6 | 24 | 8 |
+| ASP.NET compilation | 13 | 5 | 5 | 2 |
+| Web Forms | 12 | 3 | 7 | 3 |
+| .NET Remoting | 11 | 3 | 3 | 2 |
+| CodeDom | 9 | 6 | 3 | 2 |
+| BinaryFormatter | 6 | 1 | 3 | 3 |
+| ASP.NET AJAX | 3 | 1 | 1 | 1 |
+
+### System.Web
+
+ASP.NET on System.Web: the request and the response, HttpContext.Current, the
+application, modules and handlers, the cache, routing, security and session
+state. ASP.NET Core is a different stack and has none of these types.
+
+`System.Web.Routing`: 512 uses of 12 types in 136 files, 37 projects.
+
+- `RouteValueDictionary`: 275 in 73 files, first `src/Orchard.Web/Core/Common/Routes.cs:17`
+- `RequestContext`: 83 in 45 files, first `src/Orchard.Web/Core/Common/Drivers/BodyPartDriver.cs:18`
+- `Route`: 51 in 25 files, first `src/Orchard.Web/Core/Common/Routes.cs:15`
+- `RouteData`: 34 in 27 files, first `src/Orchard.Web/Core/Contents/Controllers/ContentControllerBase.cs:25`
+- `RouteCollection`: 24 in 10 files, first `src/Orchard.Web/Core/Feeds/StandardBuilders/CorePartsFeedItemBuilder.cs:16`
+- `RouteBase`: 17 in 9 files, first `src/Orchard.Web/Modules/Orchard.Alias/Implementation/AliasRoute.cs:12`
+- `VirtualPathData`: 9 in 6 files, first `src/Orchard.Web/Modules/Orchard.Alias/IAliasService.cs:28`
+- `RouteDirection`: 6 in 4 files, first `src/Orchard.Web/Core/Settings/Routes.cs:39`
+- and 4 more types: `IRouteHandler` (5), `IRouteConstraint` (4), `RouteTable`
+  (3), `StopRoutingHandler` (1).
+
+`System.Web`: 319 uses of 33 types in 113 files, 25 projects.
+
+- `HttpContextBase`: 80 in 51 files, first `src/Orchard.Web/Core/Settings/Routes.cs:39`
+- `VirtualPathUtility`: 39 in 16 files, first `src/Orchard.Web/Core/Common/Services/BbcodeFilter.cs:107`
+- `HttpContext`: 35 in 16 files, first `src/Orchard.Web/Core/XmlRpc/Controllers/HomeController.cs:65`
+- `HtmlString`: 32 in 14 files, first `src/Orchard.Web/Core/Common/Drivers/BodyPartDriver.cs:42`
+- `HttpRequestBase`: 25 in 12 files, first `src/Orchard.Web/Modules/Orchard.Alias/Implementation/DefaultAliasService.cs:188`
+- `HttpApplication`: 16 in 5 files, first `src/Orchard.WarmupStarter/Starter.cs:9`
+- `HttpResponseBase`: 9 in 6 files, first `src/Orchard.Web/Modules/Orchard.OutputCache/Filters/OutputCacheFilter.cs:661`
+- `IHttpHandler`: 9 in 3 files, first `src/Orchard/Mvc/MvcModule.cs:163`
+- and 25 more types: `HttpCookie` (8), `HttpCacheability` (7), `HttpRequest`
+  (7), `HttpPostedFileBase` (6), `HttpContextWrapper` (5), `HttpCookieCollection`
+  (4), `HttpException` (4), `HttpRuntime` (4), `HttpSessionStateBase` (4),
+  `HttpBrowserCapabilitiesBase` (3), `HttpCacheRevalidation` (3),
+  `HttpServerUtilityBase` (3), `IHttpAsyncHandler` (3), `HttpRequestWrapper` (2),
+  `HttpApplicationStateBase` (1), `HttpCachePolicyBase` (1),
+  `HttpClientCertificate` (1), `HttpFileCollectionBase` (1), `HttpResponse` (1),
+  `HttpResponseSubstitutionCallback` (1), `HttpTaskAsyncHandler` (1),
+  `IHttpModule` (1), `MimeMapping` (1), `RequestNotification` (1), `TraceContext`
+  (1).
+
+`System.Web.Security`: 50 uses of 8 types in 15 files, 3 projects.
+
+- `MembershipPasswordFormat`: 17 in 9 files, first `src/Orchard.Web/Modules/Orchard.Users/Drivers/UserPartDriver.cs:29`
+- `MembershipCreateStatus`: 11 in 1 file, first `src/Orchard.Web/Modules/Orchard.Users/Controllers/AccountController.cs:208`
+- `FormsAuthentication`: 10 in 2 files, first `src/Orchard/Security/Providers/DefaultSslSettingsProvider.cs:11`
+- `FormsAuthenticationTicket`: 6 in 1 file, first `src/Orchard/Security/Providers/FormsAuthenticationService.cs:211`
+- `FormsIdentity`: 2 in 1 file, first `src/Orchard/Security/Providers/FormsAuthenticationService.cs:136`
+- `MachineKey`: 2 in 1 file, first `src/Orchard.Web/Modules/Orchard.OpenId/Security/MachineKeyDataProtector.cs:25`
+- `Membership`: 1 in 1 file, first `src/Orchard.Web/Modules/Orchard.OpenId/Services/OpenIdAuthenticationService.cs:115`
+- `RoleProvider`: 1 in 1 file, first `src/Orchard/Security/Providers/OrchardRoleProvider.cs:7`
+
+`System.Web.SessionState`: 11 uses of 2 types in 5 files, 1 project.
+
+- `SessionStateBehavior`: 9 in 5 files, first `src/Orchard/Mvc/Routes/RouteDescriptor.cs:11`
+- `IRequiresSessionState`: 2 in 1 file, first `src/Orchard/Mvc/Routes/ShellRoute.cs:142`
+
+`System.Web.Caching`: 9 uses of 5 types in 5 files, 2 projects.
+
+- `CacheItemPriority`: 3 in 3 files, first `src/Orchard.Web/Modules/Orchard.OutputCache/Services/DefaultCacheStorageProvider.cs:30`
+- `CacheDependency`: 2 in 2 files, first `src/Orchard/Mvc/ViewEngines/ThemeAwareness/ThemeViewLocationCache.cs:40`
+- `CacheItemRemovedReason`: 2 in 1 file, first `src/Orchard/FileSystems/VirtualPath/DefaultVirtualPathMonitor.cs:116`
+- `Cache`: 1 in 1 file, first `src/Orchard.Web/Modules/Orchard.OutputCache/Services/DefaultCacheStorageProvider.cs:29`
+- `CacheItemRemovedCallback`: 1 in 1 file, first `src/Orchard/FileSystems/VirtualPath/DefaultVirtualPathMonitor.cs:90`
+
+`System.Web.Instrumentation`: 1 use of 1 type in 1 file, 1 project.
+
+- `PageInstrumentationService`: 1 in 1 file, first `src/Orchard/Mvc/MvcModule.cs:169`
+
+`System.Web.Profile`: 1 use of 1 type in 1 file, 1 project.
+
+- `ProfileBase`: 1 in 1 file, first `src/Orchard/Mvc/Wrappers/HttpContextBaseWrapper.cs:126`
+
+### ASP.NET hosting
+
+Running inside IIS's ASP.NET runtime: HostingEnvironment, VirtualPathProvider
+and the registered objects the host stops. ASP.NET Core hosts itself, and reads
+files through IFileProvider.
+
+`System.Web.Hosting`: 61 uses of 6 types in 24 files, 8 projects.
+
+- `HostingEnvironment`: 52 in 20 files, first `src/Orchard.WarmupStarter/WarmupUtility.cs:23`
+- `IRegisteredObject`: 3 in 2 files, first `src/Orchard.Web/Modules/Orchard.MessageBus/Brokers/SqlServer/Worker.cs:22`
+- `VirtualPathProvider`: 3 in 2 files, first `src/Orchard/FileSystems/Dependencies/DynamicModuleVirtualPathProvider.cs:16`
+- `ApplicationManager`: 1 in 1 file, first `src/Tools/Orchard/HostContext/CommandHostContextProvider.cs:52`
+- `VirtualDirectory`: 1 in 1 file, first `src/Orchard/FileSystems/VirtualPath/DefaultVirtualPathProvider.cs:42`
+- `VirtualFile`: 1 in 1 file, first `src/Orchard/FileSystems/VirtualPath/DefaultVirtualPathProvider.cs:32`
+
+### ASP.NET compilation
+
+ASP.NET compiling code and views at run time: BuildManager and the build
+providers. ASP.NET Core compiles ahead of time; code loaded at run time is
+loaded as assemblies.
+
+`System.Web.Compilation`: 13 uses of 5 types in 5 files, 2 projects.
+
+- `AssemblyBuilder`: 4 in 2 files, first `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:25`
+- `BuildManager`: 3 in 2 files, first `src/Orchard/Environment/IBuildManager.cs:40`
+- `BuildProvider`: 3 in 2 files, first `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:6`
+- `CompilerType`: 2 in 1 file, first `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:8`
+- `ClientBuildManager`: 1 in 1 file, first `src/Tools/Orchard/HostContext/CommandHostContextProvider.cs:132`
+
+Every line:
+
+- `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:6` BuildProvider: `public class CSharpExtensionBuildProviderShim : BuildProvider, IShim`
+- `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:8` CompilerType: `private readonly CompilerType _codeCompilerType;`
+- `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:23` CompilerType: `public override CompilerType CodeCompilerType => _codeCompilerType;`
+- `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:25` AssemblyBuilder: `public override void GenerateCode(AssemblyBuilder assemblyBuilder)`
+- `src/Orchard/Environment/Extensions/Compilers/CSharpExtensionBuildProviderShim.cs:30` AssemblyBuilder: `AssemblyBuilder = new AspNetAssemblyBuilder(assemblyBuilder, this)`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:15` AssemblyBuilder: `private readonly AssemblyBuilder _assemblyBuilder;`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:16` BuildProvider: `private readonly BuildProvider _buildProvider;`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:18` AssemblyBuilder: `public AspNetAssemblyBuilder(AssemblyBuilder assemblyBuilder, BuildProvider buildProvider)`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:18` BuildProvider: `public AspNetAssemblyBuilder(AssemblyBuilder assemblyBuilder, BuildProvider buildProvider)`
+- `src/Orchard/Environment/IBuildManager.cs:40` BuildManager: `return BuildManager.GetReferencedAssemblies().OfType<Assembly>();`
+- `src/Orchard/Environment/IBuildManager.cs:62` BuildManager: `return BuildManager.GetCompiledAssembly(virtualPath);`
+- `src/Orchard/Environment/ViewsBackgroundCompilation.cs:153` BuildManager: `BuildManager.GetCompiledAssembly(firstFile);`
+- `src/Tools/Orchard/HostContext/CommandHostContextProvider.cs:132` ClientBuildManager: `var clientBuildManager = new ClientBuildManager(virtualPath, physicalPath);`
+
+### Web Forms
+
+Pages, controls, master pages and view state. ASP.NET Core has no Web Forms: a
+page is rewritten, as Razor Pages, MVC or Blazor.
+
+`System.Web.UI`: 12 uses of 3 types in 7 files, 3 projects.
+
+- `HtmlTextWriter`: 7 in 3 files, first `src/Orchard.Web/Modules/Orchard.Templates/Services/RazorTemplateProcessor.cs:58`
+- `TemplateControl`: 3 in 2 files, first `src/Orchard/Mvc/Html/FileRegistrationContext.cs:25`
+- `OutputCacheLocation`: 2 in 2 files, first `src/Orchard.Web/Modules/Orchard.OutputCache/Filters/OutputCacheFilter.cs:349`
+
+### .NET Remoting
+
+Remote objects, channels and proxies. Not in modern .NET: a call across
+processes becomes gRPC, HTTP or named pipes.
+
+`System.Runtime.Remoting.Messaging`: 7 uses of 1 type in 2 files, 1 project.
+
+- `CallContext`: 7 in 2 files, first `src/Orchard/Environment/State/ContextState.cs:35`
+
+`System.Runtime.Remoting`: 3 uses of 1 type in 2 files, 2 projects.
+
+- `RemotingServices`: 3 in 2 files, first `src/Orchard/Environment/State/ContextState.cs:36`
+
+`System.Runtime.Remoting.Lifetime`: 1 use of 1 type in 1 file, 1 project.
+
+- `ILease`: 1 in 1 file, first `src/Tools/Orchard/Host/CommandHost.cs:59`
+
+Every line:
+
+- `src/Orchard/Environment/State/ContextState.cs:35` CallContext: `var handle = CallContext.LogicalGetData(_name) as ObjectHandle;`
+- `src/Orchard/Environment/State/ContextState.cs:36` RemotingServices: `var data = handle != null && !RemotingServices.IsTransparentProxy(handle) ? handle.Unwrap() : null;`
+- `src/Orchard/Environment/State/ContextState.cs:44` CallContext: `CallContext.LogicalSetData(_name, new ObjectHandle(data = _defaultValue()));`
+- `src/Orchard/Environment/State/ContextState.cs:64` CallContext: `CallContext.LogicalSetData(_name, new ObjectHandle(state));`
+- `src/Orchard/Environment/WorkContextAccessor.cs:48` CallContext: `var context = CallContext.LogicalGetData(_workContextSlot) as ObjectHandle;`
+- `src/Orchard/Environment/WorkContextAccessor.cs:113` CallContext: `CallContext.LogicalSetData(workContextSlot, null);`
+- `src/Orchard/Environment/WorkContextAccessor.cs:119` CallContext: `CallContext.LogicalSetData(workContextSlot, new ObjectHandle(WorkContext));`
+- `src/Orchard/Environment/WorkContextAccessor.cs:124` CallContext: `CallContext.FreeNamedDataSlot(workContextSlot);`
+- `src/Tools/Orchard/Host/CommandHost.cs:57` RemotingServices: `if (RemotingServices.IsObjectOutOfAppDomain(obj))`
+- `src/Tools/Orchard/Host/CommandHost.cs:59` ILease: `var lease = (ILease)RemotingServices.GetLifetimeService(obj);`
+- `src/Tools/Orchard/Host/CommandHost.cs:59` RemotingServices: `var lease = (ILease)RemotingServices.GetLifetimeService(obj);`
+
+### CodeDom
+
+Building code as an object model and compiling it with a CodeDomProvider. The
+System.CodeDom package carries the types on modern .NET, and compiling through a
+provider throws PlatformNotSupportedException there: Roslyn's own API is what
+compiles at run time.
+
+`System.CodeDom`: 6 uses of 3 types in 3 files, 2 projects.
+
+- `CodeCompileUnit`: 4 in 3 files, first `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:135`
+- `CodeLinePragma`: 1 in 1 file, first `src/Orchard/Environment/Extensions/Compilers/DefaultExtensionCompiler.cs:141`
+- `CodeSnippetCompileUnit`: 1 in 1 file, first `src/Orchard/Environment/Extensions/Compilers/DefaultExtensionCompiler.cs:137`
+
+`System.CodeDom.Compiler`: 2 uses of 2 types in 1 file, 1 project.
+
+- `CompilerError`: 1 in 1 file, first `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:149`
+- `CompilerParameters`: 1 in 1 file, first `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:137`
+
+`Microsoft.CSharp`: 1 use of 1 type in 1 file, 1 project.
+
+- `CSharpCodeProvider`: 1 in 1 file, first `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:146`
+
+Every line:
+
+- `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:135` CodeCompileUnit
+- `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:137` CompilerParameters: `var compilerParameters = new CompilerParameters();`
+- `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:146` CSharpCodeProvider
+- `src/Orchard.Web/Modules/Orchard.Templates/Services/Razor/RazorCompiler.cs:149` CompilerError
+- `src/Orchard/Environment/Extensions/Compilers/DefaultExtensionCompiler.cs:134` CodeCompileUnit: `private CodeCompileUnit CreateCompileUnit(string virtualPath)`
+- `src/Orchard/Environment/Extensions/Compilers/DefaultExtensionCompiler.cs:137` CodeSnippetCompileUnit: `var unit = new CodeSnippetCompileUnit(contents);`
+- `src/Orchard/Environment/Extensions/Compilers/DefaultExtensionCompiler.cs:141` CodeLinePragma: `unit.LinePragma = new CodeLinePragma(physicalPath, 1);`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:9` CodeCompileUnit: `void AddCodeCompileUnit(CodeCompileUnit compileUnit);`
+- `src/Orchard/Environment/IAssemblyBuilder.cs:24` CodeCompileUnit: `public void AddCodeCompileUnit(CodeCompileUnit compileUnit)`
+
+### BinaryFormatter
+
+BinaryFormatter is still a type on modern .NET, and since .NET 9 serializing or
+deserializing with it throws. What it wrote has to be read once more on the old
+runtime, or abandoned.
+
+`System.Runtime.Serialization.Formatters.Binary`: 6 uses of 1 type in 3 files, 3
+projects.
+
+- `BinaryFormatter`: 6 in 3 files, first `src/Orchard.Web/Modules/Orchard.OutputCache/Services/FileSystemOutputCacheProvider.cs:244`
+
+Every line:
+
+- `src/Orchard.Web/Modules/Orchard.OutputCache/Services/FileSystemOutputCacheProvider.cs:244` BinaryFormatter: `BinaryFormatter binaryFormatter = new BinaryFormatter();`
+- `src/Orchard.Web/Modules/Orchard.OutputCache/Services/FileSystemOutputCacheProvider.cs:258` BinaryFormatter: `BinaryFormatter binaryFormatter = new BinaryFormatter();`
+- `src/Orchard.Web/Modules/Orchard.Redis/OutputCache/RedisOutputCacheStorageProvider.cs:194` BinaryFormatter: `BinaryFormatter binaryFormatter = new BinaryFormatter();`
+- `src/Orchard.Web/Modules/Orchard.Redis/OutputCache/RedisOutputCacheStorageProvider.cs:203` BinaryFormatter: `BinaryFormatter binaryFormatter = new BinaryFormatter();`
+- `src/Orchard/Data/SessionConfigurationCache.cs:89` BinaryFormatter: `var formatter = new BinaryFormatter();`
+- `src/Orchard/Data/SessionConfigurationCache.cs:115` BinaryFormatter: `var formatter = new BinaryFormatter();`
+
+### ASP.NET AJAX
+
+JavaScriptSerializer and script services. System.Text.Json and Newtonsoft.Json
+serialize on modern .NET, with different defaults for dates and casing.
+
+`System.Web.Script.Serialization`: 3 uses of 1 type in 1 file, 1 project.
+
+- `JavaScriptSerializer`: 3 in 1 file, first `src/Orchard.Web/Modules/Orchard.ContentTypes/Extensions/MetadataExtensions.cs:22`
+
+By project:
+
+| Project | Uses | Types | Files | Families |
+|---|---:|---:|---:|---|
+| Orchard.Framework | 486 | 72 | 100 | System.Web 413, ASP.NET hosting 37, ASP.NET compilation 12, Web Forms 9, .NET Remoting 8, CodeDom 5, BinaryFormatter 2 |
+| Orchard.Blogs | 85 | 8 | 11 | System.Web 85 |
+| Orchard.Core | 74 | 14 | 23 | System.Web 74 |
+| Orchard.Alias | 51 | 9 | 7 | System.Web 51 |
+| Orchard.Users | 30 | 4 | 11 | System.Web 30 |
+| Orchard.OutputCache | 27 | 13 | 10 | System.Web 23, BinaryFormatter 2, Web Forms 2 |
+| Orchard.OpenId | 18 | 5 | 5 | System.Web 18 |
+| Orchard.Lists | 17 | 2 | 2 | System.Web 17 |
+| Orchard.WarmupStarter | 16 | 6 | 3 | System.Web 15, ASP.NET hosting 1 |
+| Orchard.SecureSocketsLayer | 15 | 3 | 2 | System.Web 15 |
+| Orchard.CodeGeneration | 14 | 1 | 1 | ASP.NET hosting 14 |
+| Orchard.Dashboards | 12 | 2 | 1 | System.Web 12 |
+| Orchard.Layouts | 12 | 6 | 6 | System.Web 12 |
+| Orchard.Localization | 12 | 5 | 7 | System.Web 12 |
+| Orchard.Templates | 10 | 8 | 3 | System.Web 5, CodeDom 4, Web Forms 1 |
+| Orchard | 9 | 6 | 2 | ASP.NET hosting 5, .NET Remoting 3, ASP.NET compilation 1 |
+| Orchard.Autoroute | 9 | 1 | 4 | System.Web 9 |
+| Orchard.Search | 9 | 2 | 1 | System.Web 9 |
+| Orchard.Themes | 8 | 3 | 7 | System.Web 7, ASP.NET hosting 1 |
+| Orchard.Tokens | 7 | 3 | 4 | System.Web 7 |
+| 26 more projects | 97 | 17 | 55 | |
+
+Left out because modern .NET still has them under the same name:
+`System.CodeDom.Compiler.GeneratedCodeAttribute`,
+`System.Runtime.Remoting.ObjectHandle`, `System.Web.HttpUtility`,
+`System.Web.IHtmlString`.
+
 ## What you actually use of what is going away
 
 A package with no future is not a unit of work. What decides the size is how
@@ -274,28 +672,28 @@ declares it. Every type of every package is listed in the appendix.
 
 | Package | Calls | Types | Files | Types for four fifths | Replaced by | Covered |
 |---|---:|---:|---:|---:|---|---:|
-| `Microsoft.AspNet.Mvc` | 3,619 | 185 | 365 | 24 | `Microsoft.AspNetCore.Mvc` | 83% |
-| `Autofac` | 790 | 99 | 159 | 28 | nothing recorded |  |
-| `Newtonsoft.Json` | 510 | 23 | 31 | 4 | `System.Text.Json` | 0% |
-| `NHibernate` | 462 | 79 | 58 | 25 | nothing recorded |  |
-| `Microsoft.AspNet.WebApi.Core` | 92 | 38 | 13 | 23 | `Microsoft.AspNetCore.Mvc` | 7% |
-| `log4net` | 79 | 20 | 6 | 7 | `Serilog` | 4% |
-| `Microsoft.AspNet.WebPages` | 62 | 25 | 11 | 14 | `Microsoft.AspNetCore.Mvc.Razor` | 18% |
-| `System.ServiceModel` | 40 | 16 | 4 | 8 | `CoreWCF.Primitives` | 58% |
+| `Microsoft.AspNet.Mvc` | 3,472 | 157 | 365 | 21 | `Microsoft.AspNetCore.Mvc` | 87% |
+| `Newtonsoft.Json` | 419 | 6 | 31 | 2 | `System.Text.Json` | 0% |
+| `NHibernate` | 394 | 70 | 58 | 22 | nothing recorded |  |
+| `Autofac` | 367 | 34 | 159 | 9 | nothing recorded |  |
+| `Microsoft.AspNet.WebApi.Core` | 40 | 17 | 13 | 10 | `Microsoft.AspNetCore.Mvc` | 15% |
+| `log4net` | 36 | 12 | 6 | 5 | `Serilog` | 8% |
+| `Microsoft.AspNet.WebPages` | 29 | 8 | 11 | 5 | `Microsoft.AspNetCore.Mvc.Razor` | 38% |
+| `System.ServiceModel` | 26 | 12 | 4 | 7 | `CoreWCF.Primitives` | 88% |
 | `Owin` | 19 | 10 | 10 | 7 | nothing recorded |  |
 | `Microsoft.AspNet.Razor` | 6 | 6 | 1 | 5 | nothing recorded |  |
 
 ### Microsoft.AspNet.Mvc
 
-3,619 uses of 185 types, across 365 files. 24 types and 134 files carry four
-fifths of it. **Microsoft.AspNetCore.Mvc** covers 83% of those calls; 543 calls
+3,472 uses of 157 types, across 365 files. 21 types and 131 files carry four
+fifths of it. **Microsoft.AspNetCore.Mvc** covers 87% of those calls; 396 calls
 are not in the catalogue at all: unknown, which is not the same as fine.
 
 Asked of the framework itself rather than of the catalogue, the unknown column
 holds 7 types that exist inside Microsoft.AspNetCore.Mvc under the same name, a
-lead worth checking; 12 types that exist elsewhere in the framework under the
-same name, which nobody has recorded either way; and 97 types the framework does
-not have at all. That leaves 109 types still to decide.
+lead worth checking; 9 types that exist elsewhere in the framework under the
+same name, which nobody has recorded either way; and 72 types the framework does
+not have at all. That leaves 81 types still to decide.
 
 | Type | Calls | What happens to it |
 |---|---:|---|
@@ -307,31 +705,25 @@ not have at all. That leaves 109 types still to decide.
 | `HttpContext` | 8 | unknown; same name at `Microsoft.AspNetCore.Http.HttpContext` |
 | `IRouteHandler` | 5 | unknown; same name at `Microsoft.AspNetCore.Routing.IRouteHandler` |
 | `VirtualPathData` | 5 | unknown; same name at `Microsoft.AspNetCore.Routing.VirtualPathData` |
-| `IModule` | 4 | unknown; same name at `ICSharpCode.Decompiler.TypeSystem.IModule` |
 | `OutputCacheAttribute` | 3 | **no replacement recorded** |
 | `HttpRequest` | 3 | unknown; same name at `Microsoft.AspNetCore.Http.HttpRequest` |
 | `IRouteConstraint` | 2 | unknown; same name at `Microsoft.AspNetCore.Routing.IRouteConstraint` |
 | `RouteDirection` | 2 | unknown; same name at `Microsoft.AspNetCore.Routing.RouteDirection` |
 | `HandleErrorAttribute` | 1 | **no replacement recorded** |
 | `IDependencyResolver` | 1 | **no replacement recorded** |
-
-### Autofac
-
-790 uses of 99 types, across 159 files. 28 types and 67 files carry four fifths
-of it. Nobody has recorded what replaces this. That is a gap in the catalogue
-rather than a statement about the package.
+| `AuthenticationProperties` | 1 | unknown; same name at `Microsoft.AspNetCore.Authentication.AuthenticationProperties` |
 
 ### Newtonsoft.Json
 
-510 uses of 23 types, across 31 files. 4 types and 2 files carry four fifths of
-it. **System.Text.Json** covers 0% of those calls; 91 calls are not in the
+419 uses of 6 types, across 31 files. 2 types and 1 file carry four fifths of
+it. **System.Text.Json** covers 0% of those calls; 0 calls are not in the
 catalogue at all: unknown, which is not the same as fine.
 
 Asked of the framework itself rather than of the catalogue, the unknown column
 holds 0 types that exist inside System.Text.Json under the same name, a lead
-worth checking; 7 types that exist elsewhere in the framework under the same
-name, which nobody has recorded either way; and 10 types the framework does not
-have at all. That leaves 17 types still to decide.
+worth checking; 0 types that exist elsewhere in the framework under the same
+name, which nobody has recorded either way; and 0 types the framework does not
+have at all. That leaves 0 types still to decide.
 
 | Type | Calls | What happens to it |
 |---|---:|---|
@@ -339,45 +731,37 @@ have at all. That leaves 17 types still to decide.
 | `JObject` | 114 | **no replacement recorded** |
 | `JArray` | 38 | **no replacement recorded** |
 | `JToken` | 22 | **no replacement recorded** |
-| `ActionResult` | 17 | unknown; same name at `Microsoft.AspNetCore.Mvc.ActionResult` |
-| `HtmlString` | 12 | unknown; same name at `Microsoft.AspNetCore.Html.HtmlString` |
-| `Controller` | 3 | unknown; same name at `Microsoft.AspNetCore.Mvc.Controller` |
-| `FormCollection` | 3 | unknown; same name at `Microsoft.AspNetCore.Http.FormCollection` |
 | `JValue` | 1 | **no replacement recorded** |
-| `JsonResult` | 1 | unknown; same name at `Microsoft.AspNetCore.Mvc.JsonResult` |
-| `RouteData` | 1 | unknown; same name at `Microsoft.AspNetCore.Routing.RouteData` |
-| `SelectListItem` | 1 | unknown; same name at `Microsoft.AspNetCore.Mvc.Rendering.SelectListItem` |
 
 ### NHibernate
 
-462 uses of 79 types, across 58 files. 25 types and 28 files carry four fifths
+394 uses of 70 types, across 58 files. 22 types and 21 files carry four fifths
+of it. Nobody has recorded what replaces this. That is a gap in the catalogue
+rather than a statement about the package.
+
+### Autofac
+
+367 uses of 34 types, across 159 files. 9 types and 80 files carry four fifths
 of it. Nobody has recorded what replaces this. That is a gap in the catalogue
 rather than a statement about the package.
 
 ### Microsoft.AspNet.WebApi.Core
 
-92 uses of 38 types, across 13 files. 23 types and 7 files carry four fifths of
-it. **Microsoft.AspNetCore.Mvc** covers 7% of those calls; 82 calls are not in
+40 uses of 17 types, across 13 files. 10 types and 7 files carry four fifths of
+it. **Microsoft.AspNetCore.Mvc** covers 15% of those calls; 30 calls are not in
 the catalogue at all: unknown, which is not the same as fine.
 
 Asked of the framework itself rather than of the catalogue, the unknown column
-holds 5 types that exist inside Microsoft.AspNetCore.Mvc under the same name, a
-lead worth checking; 6 types that exist elsewhere in the framework under the
-same name, which nobody has recorded either way; and 22 types the framework does
-not have at all. That leaves 28 types still to decide.
+holds 2 types that exist inside Microsoft.AspNetCore.Mvc under the same name, a
+lead worth checking; 0 types that exist elsewhere in the framework under the
+same name, which nobody has recorded either way; and 10 types the framework does
+not have at all. That leaves 10 types still to decide.
 
 | Type | Calls | What happens to it |
 |---|---:|---|
-| `ContainerBuilder` | 8 | unknown to the catalogue |
-| `ILifetimeScope` | 6 | unknown to the catalogue |
 | `IHttpController` | 5 | unknown to the catalogue |
-| `RouteCollection` | 5 | unknown; same name at `Microsoft.AspNetCore.Routing.RouteCollection` |
+| `ConfigurationSettingsReader` | 4 | unknown to the catalogue |
 | `HttpConfiguration` | 4 | **no replacement recorded** |
-| `IModule` | 3 | unknown; same name at `ICSharpCode.Decompiler.TypeSystem.IModule` |
-| `KeyedService` | 2 | unknown; same name at `Microsoft.Extensions.DependencyInjection.KeyedService` |
-| `RequestContext` | 1 | unknown; same name at `ModelContextProtocol.Server.RequestContext` |
-| `RouteBase` | 1 | unknown; same name at `Microsoft.AspNetCore.Routing.RouteBase` |
-| `RouteData` | 1 | unknown; same name at `Microsoft.AspNetCore.Routing.RouteData` |
 
 5 further packages in the table above are not detailed here; their types are in
 the appendix.
@@ -484,7 +868,7 @@ arguments are about.
 |---:|---|---|---|
 | 1 | Classify the packages nobody has checked yet | Needed before anyone can price the rest | 78 packages |
 | 2 | Convert the project files that can take the modern format | Mechanical, no decision required | 13 projects |
-| 3 | Retire the hand-written binding redirects | Mechanical, no decision required | 279 redirects |
+| 3 | Keep the hand-written binding redirects through the conversion | Mechanical, no decision required | 279 redirects |
 | 4 | Decide what happens to the code built on System.Web | Needs a decision, not a tool | 73 projects |
 | 5 | Separate the libraries that depend on the web stack | Needs a decision, not a tool | 1 library |
 | 6 | Put tests around the files most likely to break | Never finished, only kept up | 20 files |
@@ -510,14 +894,17 @@ separate problem and the format change does not pretend to fix it. What comes
 out is a patch that applies, and whether the solution restores and compiles
 afterwards is for the build to say, not for this. What it covers is listed in the appendix.
 
-### 3. Retire the hand-written binding redirects
+### 3. Keep the hand-written binding redirects through the conversion
 
 *Mechanical, no decision required. 279 redirects.*
 
 A redirect only ever gets written because two assemblies disagreed about a
 version. The project files no longer show the disagreement, which means the
 redirects are load-bearing: removing one at conversion time is how a migration
-acquires a runtime failure that nothing in the build predicted.
+acquires a runtime failure that nothing in the build predicted. The packages
+conversion leaves every one where it is, and that is the step: carry them
+through it untouched. Retiring them comes afterwards, one at a time against a
+running application, because each one is a question the build does not answer.
 
 ### 4. Decide what happens to the code built on System.Web
 
@@ -590,45 +977,41 @@ that no longer exists is its own problem.
 For the engineer doing the work. Each package with its types, heaviest first,
 and the number of calls in brackets.
 
-**Microsoft.AspNet.Mvc, 185 types.** `ActionResult` (541),
+**Microsoft.AspNet.Mvc, 157 types.** `ActionResult` (541),
 `HttpUnauthorizedResult` (408), `HttpPost` (260), `RouteValueDictionary` (194),
 `SelectListItem` (172), `HtmlHelper` (167), `ActionName` (134), `Controller`
 (131), `IHtmlString` (127), `UrlHelper` (105), `MvcHtmlString` (70), `Route`
 (63), `RequestContext` (59), `MvcRouteHandler` (58), `ValidateInput` (57),
-`TagBuilder` (51), `Mock` (46), `ControllerContext` (43), `HtmlString` (41),
-`ViewContext` (41), `IViewDataContainer` (39), `JsonResult` (35), `IViewEngine`
-(34), `RouteCollection` (34), `RouteData` (34), `ContainerBuilder` (28),
-`HttpContextBase` (28), `FormCollection` (27), `ViewDataDictionary` (23),
-`IValueProvider` (19), `RouteBase` (17), `ModelStateDictionary` (16),
-`ActionExecutingContext` (15), `ResultExecutedContext` (15),
-`ResultExecutingContext` (15), `ViewEngineResult` (15), `ILifetimeScope` (14),
-`IResultFilter` (14), `ViewResult` (12), `ActionExecutedContext` (10),
+`TagBuilder` (51), `ControllerContext` (43), `HtmlString` (41), `ViewContext`
+(41), `IViewDataContainer` (39), `JsonResult` (35), `IViewEngine` (34),
+`RouteCollection` (34), `RouteData` (34), `HttpContextBase` (28),
+`FormCollection` (27), `ViewDataDictionary` (23), `IValueProvider` (19),
+`RouteBase` (17), `ModelStateDictionary` (16), `ActionExecutingContext` (15),
+`ResultExecutedContext` (15), `ResultExecutingContext` (15), `ViewEngineResult`
+(15), `IResultFilter` (14), `ViewResult` (12), `ActionExecutedContext` (10),
 `AuthorizationContext` (10), `DictionaryValueProvider` (10), `IView` (10),
 `RedirectResult` (9), `HttpContext` (8), `TagRenderMode` (8), `ControllerBase`
-(7), `HtmlTextWriter` (7), `IActionFilter` (7), `IComponentContext` (7),
-`IHttpHandler` (7), `IRouteWithArea` (7), `RedirectToRouteResult` (7),
-`HttpApplication` (6), `HttpNotFoundResult` (6), `MvcForm` (6), `SelectList`
-(6), `Bind` (5), `HttpRequestBase` (5), `HttpResponseBase` (5), `IRouteHandler`
-(5), `JObject` (5), `Meta` (5), `NamedParameter` (5), `TempDataDictionary` (5),
-`ViewResultBase` (5), `VirtualPathData` (5), `WebPageBase` (5), `Authorize` (4),
-`ConfigurationSettingsReader` (4), `ContentResult` (4), `ExceptionContext` (4),
-`HiddenInput` (4), `HttpCookieCollection` (4), `HttpStatusCodeResult` (4),
-`IModelBinder` (4), `IModule` (4), `ModelBinderDictionary` (4),
+(7), `HtmlTextWriter` (7), `IActionFilter` (7), `IHttpHandler` (7),
+`IRouteWithArea` (7), `RedirectToRouteResult` (7), `HttpApplication` (6),
+`HttpNotFoundResult` (6), `MvcForm` (6), `SelectList` (6), `Bind` (5),
+`HttpRequestBase` (5), `HttpResponseBase` (5), `IRouteHandler` (5),
+`TempDataDictionary` (5), `ViewResultBase` (5), `VirtualPathData` (5),
+`Authorize` (4), `ConfigurationSettingsReader` (4), `ContentResult` (4),
+`ExceptionContext` (4), `HiddenInput` (4), `HttpCookieCollection` (4),
+`HttpStatusCodeResult` (4), `IModelBinder` (4), `ModelBinderDictionary` (4),
 `ModelBindingContext` (4), `SessionStateBehavior` (4), `ValueProviderResult`
-(4), `WebPageContext` (4), `ConcreteReflectionActivatorData` (3),
-`ControllerBuilder` (3), `EmptyResult` (3), `FormMethod` (3),
-`HttpContextWrapper` (3), `HttpRequest` (3), `IAuthorizationFilter` (3),
-`IComponentRegistry` (3), `IHttpAsyncHandler` (3), `IRegistrationBuilder` (3),
-`MvcHandler` (3), `OutputCacheAttribute` (3), `RazorViewEngine` (3),
-`SelectListGroup` (3), `SingleRegistrationStyle` (3), `TemplateControl` (3),
-`TemplateInfo` (3), `ViewEngineCollection` (3), `ActionMethodSelectorAttribute`
-(2), `Cell` (2), `CellValues` (2), `DefaultControllerFactory` (2),
-`DefaultModelBinder` (2), `EnumValue` (2), `FileContentResult` (2), `Filter`
-(2), `HelperResult` (2), `HttpBrowserCapabilitiesBase` (2), `HttpRequestWrapper`
-(2), `HttpServerUtilityBase` (2), `HttpSessionStateBase` (2),
-`IComponentRegistration` (2), `IExceptionFilter` (2), `IHttpController` (2),
+(4), `WebPageContext` (4), `ControllerBuilder` (3), `EmptyResult` (3),
+`FormMethod` (3), `HttpContextWrapper` (3), `HttpRequest` (3),
+`IAuthorizationFilter` (3), `IHttpAsyncHandler` (3), `MvcHandler` (3),
+`OutputCacheAttribute` (3), `RazorViewEngine` (3), `SelectListGroup` (3),
+`SingleRegistrationStyle` (3), `TemplateControl` (3), `TemplateInfo` (3),
+`ViewEngineCollection` (3), `ActionMethodSelectorAttribute` (2), `Cell` (2),
+`CellValues` (2), `DefaultControllerFactory` (2), `DefaultModelBinder` (2),
+`EnumValue` (2), `FileContentResult` (2), `Filter` (2), `HelperResult` (2),
+`HttpBrowserCapabilitiesBase` (2), `HttpRequestWrapper` (2),
+`HttpServerUtilityBase` (2), `HttpSessionStateBase` (2), `IExceptionFilter` (2),
 `IRequiresSessionState` (2), `IRouteConstraint` (2), `InlineString` (2),
-`JArray` (2), `NameValueCollectionValueProvider` (2), `OutputCache` (2),
+`NameValueCollectionValueProvider` (2), `OutputCache` (2),
 `PageInstrumentationService` (2), `ReflectedControllerDescriptor` (2),
 `RequireHttpsAttribute` (2), `ResizeSettings` (2), `RouteDirection` (2),
 `SmtpSection` (2), `WebPageRenderingBase` (2), `ActionFilterAttribute` (1),
@@ -637,128 +1020,83 @@ and the number of calls in brackets.
 `DataAnnotationsModelValidatorProvider` (1), `ExceptionFilterAttribute` (1),
 `FileResult` (1), `FilterAttribute` (1), `HandleError` (1),
 `HandleErrorAttribute` (1), `HttpActionExecutedContext` (1),
-`HttpAntiForgeryException` (1), `HttpControllerContext` (1), `HttpException`
-(1), `HttpGet` (1), `HttpResponse` (1), `HttpTaskAsyncHandler` (1),
-`IAuthenticationFilter` (1), `IContainerProvider` (1), `IDependencyResolver`
-(1), `IHttpControllerActivator` (1), `IHttpControllerSelector` (1), `IHttpRoute`
-(1), `IHttpRouteData` (1), `IInterceptor` (1), `IInvocation` (1), `IPackage`
-(1), `IPackageRepository` (1), `ISession` (1), `IViewLocationCache` (1),
-`JProperty` (1), `KeyedService` (1), `LifetimeScope` (1), `MailboxAddress` (1),
+`HttpAntiForgeryException` (1), `HttpException` (1), `HttpGet` (1),
+`HttpResponse` (1), `HttpTaskAsyncHandler` (1), `IAuthenticationFilter` (1),
+`IDependencyResolver` (1), `IHttpRoute` (1), `IHttpRouteData` (1),
+`IViewLocationCache` (1), `LifetimeScope` (1), `MailboxAddress` (1),
 `MembershipCreateStatus` (1), `MimeMessage` (1), `ModelMetadata` (1),
-`ModelValidator` (1), `OutputCacheLocation` (1), `PackageSource` (1),
-`PartialViewResult` (1), `RangeAttributeAdapter` (1),
-`RegularExpressionAttributeAdapter` (1), `RequiredAttributeAdapter` (1), `Sheet`
-(1), `SheetData` (1), `Sheets` (1), `StopRoutingHandler` (1),
-`StringLengthAttributeAdapter` (1), `ValidateAntiForgeryTokenAttribute` (1),
-`WebFormViewEngine` (1), `Workbook` (1), `Worksheet` (1), `ZipPackage` (1).
+`ModelValidator` (1), `OutputCacheLocation` (1), `PartialViewResult` (1),
+`RangeAttributeAdapter` (1), `RegularExpressionAttributeAdapter` (1),
+`RequiredAttributeAdapter` (1), `Sheet` (1), `SheetData` (1), `Sheets` (1),
+`StopRoutingHandler` (1), `StringLengthAttributeAdapter` (1),
+`ValidateAntiForgeryTokenAttribute` (1), `WebFormViewEngine` (1), `Workbook`
+(1), `Worksheet` (1).
 
-**Autofac, 99 types.** `ContainerBuilder` (144), `Mock` (127), `ILifetimeScope`
-(60), `IComponentRegistration` (34), `HttpContextBase` (24), `RequestContext`
-(22), `HtmlString` (21), `IComponentContext` (17), `MvcRouteHandler` (16),
-`ISession` (15), `ISessionFactory` (15), `Route` (15), `RouteCollection` (15),
-`IComponentRegistry` (13), `RouteData` (11), `Service` (10), `UrlHelper` (10),
-`IRegistrationBuilder` (8), `ZipPackage` (8), `InstanceContext` (6),
-`NamedParameter` (6), `ConcreteReflectionActivatorData` (5), `Controller` (5),
-`HttpApplication` (5), `IHttpController` (5), `IModule` (5), `Meta` (5),
-`RouteValueDictionary` (5), `TypedParameter` (5), `ConfigurationSettingsReader`
-(4), `ControllerContext` (4), `HttpConfiguration` (4), `HttpContext` (4),
-`HttpControllerContext` (4), `HttpControllerDescriptor` (4),
-`HttpCookieCollection` (4), `HttpRequestBase` (4), `ICriteria` (4),
-`KeyedService` (4), `RedirectToRouteResult` (4), `ServiceHostBase` (4),
-`ViewContext` (4), `ControllerBuilder` (3), `DefaultProxyBuilder` (3),
-`IDependencyScope` (3), `IRegistrationSource` (3), `IServiceWithType` (3),
-`MockBehavior` (3), `RouteBase` (3), `ServiceDescription` (3), `ServiceEndpoint`
-(3), `SingleRegistrationStyle` (3), `TypedService` (3), `ChannelDispatcher` (2),
-`ContentResult` (2), `DefaultControllerFactory` (2),
-`HttpBrowserCapabilitiesBase` (2), `HttpResponseBase` (2),
-`HttpServerUtilityBase` (2), `HttpSessionStateBase` (2), `IContainerProvider`
-(2), `IDependencyResolver` (2), `IHttpControllerActivator` (2),
-`IHttpControllerSelector` (2), `IHttpHandler` (2), `IInterceptor` (2),
-`IInvocation` (2), `IPackage` (2), `ModelBinderDictionary` (2),
-`ModelStateDictionary` (2), `PageInstrumentationService` (2), `RedirectResult`
-(2), `ScanningActivatorData` (2), `ServiceHost` (2), `ViewEngineCollection` (2),
-`BindingParameterCollection` (1), `ControllerBase` (1),
-`DefaultHttpControllerSelector` (1), `DistinctRootEntityResultTransformer` (1),
-`HiddenInput` (1), `HtmlHelper` (1), `HttpContextWrapper` (1), `HttpRequest`
-(1), `HttpResponse` (1), `IAppender` (1), `IDisposer` (1), `IExtension` (1),
-`IInstanceProvider` (1), `IProxyBuilder` (1), `IServiceBehavior` (1),
-`ITransaction` (1), `LifetimeScope` (1), `LoggingEvent` (1), `Message` (1),
-`MvcHandler` (1), `PositionalParameter` (1), `ServiceHostFactory` (1),
-`ViewResult` (1), `WebFormViewEngine` (1).
+**Newtonsoft.Json, 6 types.** `JProperty` (243), `JObject` (114), `JArray` (38),
+`JToken` (22), `Formatting` (1), `JValue` (1).
 
-**Newtonsoft.Json, 23 types.** `JProperty` (243), `JObject` (114), `JArray`
-(38), `JToken` (22), `ActionResult` (17), `HttpUnauthorizedResult` (16),
-`HtmlString` (12), `HttpPost` (11), `ActionName` (7),
-`FormsAuthenticationTicket` (7), `HttpCookie` (5), `Controller` (3),
-`FormCollection` (3), `FormsIdentity` (2), `ValidateInput` (2),
-`ConnectionMultiplexer` (1), `Formatting` (1), `HttpContextBase` (1),
-`IDatabase` (1), `JValue` (1), `JsonResult` (1), `RouteData` (1),
-`SelectListItem` (1).
+**NHibernate, 70 types.** `ICriteria` (76), `ISession` (50), `ICriterion` (30),
+`ISessionFactory` (25), `Configuration` (23), `IProjection` (16), `IType` (12),
+`DetachedCriteria` (11), `CriteriaImpl` (10), `ICriteriaQuery` (8),
+`ITransaction` (8), `LinqExpression` (6), `Conjunction` (5), `ISQLFunction` (5),
+`JoinType` (5), `SchemaExport` (5), `IResultTransformer` (4),
+`ISessionFactoryImplementor` (4), `SimpleExpression` (4),
+`SqlFunctionProjection` (4), `TypedValue` (4), `VarArgsSQLFunction` (4),
+`Dialect` (3), `IDiagnosticLogger` (3), `IEntityPersister` (3),
+`ISessionImplementor` (3), `ITypeSource` (3), `ProjectionList` (3),
+`PropertyProjection` (3), `SqlStringBuilder` (3), `SqlType` (3),
+`ASTQueryTranslatorFactory` (2), `AutoMappingOverrideAlteration` (2),
+`Disjunction` (2), `DistinctRootEntityResultTransformer` (2), `IInterceptor`
+(2), `IQuery` (2), `LockMode` (2), `PropertyExpression` (2), `SqlConnection`
+(2), `AbstractStringType` (1), `AggregateProjection` (1),
+`AutoMappingAlterationCollection` (1), `CacheMode` (1), `CastProjection` (1),
+`ConstantProjection` (1), `CriteriaQueryTranslator` (1),
+`DefaultLoadEventListener` (1), `EmptyInterceptor` (1), `EntityKey` (1),
+`ExceptionFilterAttribute` (1), `FetchMode` (1), `FlushMode` (1),
+`HibernateException` (1), `HttpActionExecutedContext` (1), `IFutureEnumerable`
+(1), `IFutureValue` (1), `ILoadEventListener` (1), `INamingStrategy` (1),
+`LoadEvent` (1), `LoadType` (1), `MatchMode` (1), `Order` (1),
+`PersistenceConfiguration` (1), `PostgreSQL82Dialect` (1),
+`RootEntityResultTransformer` (1), `SchemaUpdate` (1), `SqlException` (1),
+`StringQueryExpression` (1), `Subcriteria` (1).
 
-**NHibernate, 79 types.** `ICriteria` (76), `ISession` (50), `ICriterion` (30),
-`Mock` (29), `ISessionFactory` (25), `Configuration` (23), `ContainerBuilder`
-(17), `IProjection` (16), `IType` (12), `DetachedCriteria` (11), `CriteriaImpl`
-(10), `ICriteriaQuery` (8), `ITransaction` (8), `FluentConfiguration` (6),
-`LinqExpression` (6), `Conjunction` (5), `IPersistenceConfigurer` (5),
-`ISQLFunction` (5), `JoinType` (5), `SchemaExport` (5), `AutoPersistenceModel`
-(4), `IResultTransformer` (4), `ISessionFactoryImplementor` (4),
-`SimpleExpression` (4), `SqlFunctionProjection` (4), `TypedValue` (4),
-`VarArgsSQLFunction` (4), `Dialect` (3), `IDiagnosticLogger` (3),
-`IEntityPersister` (3), `ISessionImplementor` (3), `ITypeSource` (3), `Meta`
-(3), `ProjectionList` (3), `PropertyProjection` (3), `SqlStringBuilder` (3),
-`SqlType` (3), `ASTQueryTranslatorFactory` (2), `AutoMappingOverrideAlteration`
-(2), `Disjunction` (2), `DistinctRootEntityResultTransformer` (2),
-`IComponentContext` (2), `IInterceptor` (2), `IQuery` (2), `LockMode` (2),
-`PropertyExpression` (2), `SqlConnection` (2), `AbstractStringType` (1),
-`AggregateProjection` (1), `AutoMappingAlterationCollection` (1), `CacheMode`
-(1), `CastProjection` (1), `ConstantProjection` (1), `CriteriaQueryTranslator`
-(1), `DefaultLoadEventListener` (1), `EmptyInterceptor` (1), `EntityKey` (1),
-`ExceptionContext` (1), `ExceptionFilterAttribute` (1), `FetchMode` (1),
-`FlushMode` (1), `HibernateException` (1), `HttpActionExecutedContext` (1),
-`IExceptionFilter` (1), `IFutureEnumerable` (1), `IFutureValue` (1),
-`ILoadEventListener` (1), `INamingStrategy` (1), `LoadEvent` (1), `LoadType`
-(1), `MatchMode` (1), `Order` (1), `PersistenceConfiguration` (1),
-`PostgreSQL82Dialect` (1), `RootEntityResultTransformer` (1), `SchemaUpdate`
-(1), `SqlException` (1), `StringQueryExpression` (1), `Subcriteria` (1).
+**Autofac, 34 types.** `ContainerBuilder` (144), `ILifetimeScope` (60),
+`IComponentRegistration` (34), `IComponentContext` (17), `IComponentRegistry`
+(13), `Service` (10), `IRegistrationBuilder` (8), `NamedParameter` (6),
+`ConcreteReflectionActivatorData` (5), `IHttpController` (5), `IModule` (5),
+`Meta` (5), `TypedParameter` (5), `ConfigurationSettingsReader` (4),
+`HttpControllerContext` (4), `HttpControllerDescriptor` (4), `KeyedService` (4),
+`ControllerBuilder` (3), `IDependencyScope` (3), `IRegistrationSource` (3),
+`IServiceWithType` (3), `SingleRegistrationStyle` (3), `TypedService` (3),
+`DefaultControllerFactory` (2), `IContainerProvider` (2),
+`IHttpControllerActivator` (2), `IHttpControllerSelector` (2),
+`ScanningActivatorData` (2), `DefaultHttpControllerSelector` (1),
+`IDependencyResolver` (1), `IDisposer` (1), `LifetimeScope` (1),
+`PositionalParameter` (1), `WebFormViewEngine` (1).
 
-**Microsoft.AspNet.WebApi.Core, 38 types.** `ContainerBuilder` (8),
-`ILifetimeScope` (6), `IHttpController` (5), `RouteCollection` (5),
+**Microsoft.AspNet.WebApi.Core, 17 types.** `IHttpController` (5),
 `ConfigurationSettingsReader` (4), `HttpConfiguration` (4),
 `HttpControllerContext` (4), `HttpControllerDescriptor` (4),
-`ConcreteReflectionActivatorData` (3), `IModule` (3), `IRegistrationBuilder`
-(3), `NamedParameter` (3), `SingleRegistrationStyle` (3), `ApiController` (2),
-`ControllerContext` (2), `HttpActionContext` (2), `IComponentRegistration` (2),
-`IComponentRegistry` (2), `IHttpControllerActivator` (2),
-`IHttpControllerSelector` (2), `IRouteWithArea` (2), `KeyedService` (2), `Meta`
-(2), `Route` (2), `ViewContext` (2), `Controller` (1),
-`DefaultHttpControllerSelector` (1), `HttpContextBase` (1), `HttpGet` (1),
-`IActionFilter` (1), `IAuthorizationFilter` (1), `IHttpActionResult` (1),
-`IInterceptor` (1), `IInvocation` (1), `LifetimeScope` (1), `RequestContext`
-(1), `RouteBase` (1), `RouteData` (1).
+`SingleRegistrationStyle` (3), `ApiController` (2), `HttpActionContext` (2),
+`IHttpControllerActivator` (2), `IHttpControllerSelector` (2), `Route` (2),
+`DefaultHttpControllerSelector` (1), `HttpGet` (1), `IActionFilter` (1),
+`IAuthorizationFilter` (1), `IHttpActionResult` (1), `LifetimeScope` (1).
 
-**log4net, 20 types.** `SystemStringFormat` (20), `Given` (13), `HtmlNode` (9),
-`When` (9), `Then` (6), `HtmlDocument` (4), `ContainerBuilder` (3), `IAppender`
-(2), `LoggingEvent` (2), `AbstractLoggerFactory` (1), `AfterScenario` (1),
-`AfterTestRun` (1), `BeforeScenario` (1), `BeforeTestRun` (1), `Binding` (1),
-`HttpContextWrapper` (1), `HttpException` (1), `ILog` (1), `LoggerLevel` (1),
-`TraceLoggerFactory` (1).
+**log4net, 12 types.** `SystemStringFormat` (20), `HtmlDocument` (4),
+`IAppender` (2), `LoggingEvent` (2), `AbstractLoggerFactory` (1),
+`AfterScenario` (1), `AfterTestRun` (1), `BeforeScenario` (1), `BeforeTestRun`
+(1), `ILog` (1), `LoggerLevel` (1), `TraceLoggerFactory` (1).
 
-**Microsoft.AspNet.WebPages, 25 types.** `HtmlHelper` (9), `MvcHtmlString` (5),
-`WebPageBase` (5), `ViewContext` (4), `ViewDataDictionary` (4), `WebPageContext`
-(4), `AuthenticationContext` (3), `ClientCredential` (3), `HtmlTextWriter` (3),
-`IViewDataContainer` (3), `ActiveDirectoryClient` (2), `HelperResult` (2),
-`HttpContextBase` (2), `WebPageRenderingBase` (2), `ContainerBuilder` (1),
-`Controller` (1), `ControllerContext` (1), `CookieAuthenticationOptions` (1),
-`HttpApplication` (1), `IView` (1), `OpenIdConnectAuthenticationNotifications`
-(1), `OpenIdConnectAuthenticationOptions` (1), `RouteCollection` (1),
-`TempDataDictionary` (1), `TemplateControl` (1).
+**Microsoft.AspNet.WebPages, 8 types.** `HtmlHelper` (9), `WebPageBase` (5),
+`WebPageContext` (4), `AuthenticationContext` (3), `ClientCredential` (3),
+`HelperResult` (2), `WebPageRenderingBase` (2), `CookieAuthenticationOptions`
+(1).
 
-**System.ServiceModel, 16 types.** `IComponentRegistration` (9),
-`InstanceContext` (6), `ServiceHostBase` (4), `ILifetimeScope` (3),
+**System.ServiceModel, 12 types.** `InstanceContext` (6), `ServiceHostBase` (4),
 `ServiceDescription` (3), `ServiceEndpoint` (3), `ChannelDispatcher` (2),
 `ServiceHost` (2), `BindingParameterCollection` (1), `IExtension` (1),
-`IInstanceProvider` (1), `IServiceBehavior` (1), `KeyedService` (1), `Message`
-(1), `ServiceHostFactory` (1), `TypedService` (1).
+`IInstanceProvider` (1), `IServiceBehavior` (1), `Message` (1),
+`ServiceHostFactory` (1).
 
 **Owin, 10 types.** `IAppBuilder` (4), `AuthenticationContext` (3),
 `ClientCredential` (3), `OpenIdConnectAuthenticationNotifications` (2),
@@ -815,8 +1153,9 @@ System.Web.WebPages, System.Web.WebPages.Deployment, System.Web.WebPages.Razor`.
 
 ---
 
-Measured in 9,824 ms, without compiling anything, without restoring a package
+Measured in 15,826 ms, without compiling anything, without restoring a package
 and without contacting any service. That is what makes it usable on a solution
 that does not build, which is the state an inherited codebase is in on the first
-day. Generated by Legacy Lens.
+day. Generated by [Legacy
+Lens](https://liquidsnake0.github.io/legacy-lens-site/).
 
